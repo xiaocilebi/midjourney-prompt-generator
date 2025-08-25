@@ -1,0 +1,660 @@
+"use client";
+import dynamic from "next/dynamic";
+import { useTranslations } from "next-intl";
+import { useState, useRef, useLayoutEffect, useMemo, memo } from "react";
+import {
+  Sparkles,
+  Bot,
+  Copy,
+  Check,
+  SlidersHorizontal,
+  RotateCcw,
+  Proportions,
+  Brush,
+  PencilRuler,
+  History,
+  Loader2,
+  ScanEye,
+  LoaderCircle,
+} from "lucide-react";
+import { fetchEventSource } from "@microsoft/fetch-event-source";
+import copy from "copy-to-clipboard";
+import dayjs from "dayjs";
+import isToday from "dayjs/plugin/isToday";
+import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectLabel,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
+import { Separator } from "@/components/ui/separator";
+import Header from "@/components/header";
+import { useSettingStore } from "@/store/setting";
+import { useHistoryStore } from "@/store/history";
+import { cn } from "@/utils/style";
+import { uid } from "radash";
+
+const HistoryItem = dynamic(() => import("@/components/history-item"));
+const ImageUploader = dynamic(() => import("@/components/image-uploader"));
+
+dayjs.extend(isToday);
+
+const PAGE_SIZE = 20;
+
+function Prompt() {
+  const t = useTranslations();
+  const historyStore = useHistoryStore();
+  const settingStore = useSettingStore();
+  const promptRef = useRef<HTMLDivElement>(null);
+  const optimizedPromptRef = useRef<HTMLDivElement>(null);
+  const [currentId, setCurrentId] = useState<string>("");
+  const [finished, setFinished] = useState<boolean>(false);
+  const [presets, setPresets] = useState<Presets>({});
+  const [showSettings, setShowSettings] = useState<boolean>(false);
+  const [loading, setLoading] = useState<boolean>(false);
+  const [waitingCopy, setWaitingCopy] = useState<boolean>(false);
+  const [waitingVision, setWaitingVision] = useState<boolean>(false);
+  const [historyList, setHistoryList] = useState<Showcase[]>([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const showLoadMore = useMemo(() => {
+    return historyStore.history.length > currentPage * PAGE_SIZE;
+  }, [historyStore.history, currentPage]);
+  const historyByToday = useMemo(() => {
+    return historyStore.history.filter((item) => dayjs(item.time).isToday());
+  }, [historyStore.history]);
+
+  const handleCopy = () => {
+    if (optimizedPromptRef.current) {
+      setWaitingCopy(true);
+      copy(optimizedPromptRef.current?.textContent || "");
+      setTimeout(() => {
+        setWaitingCopy(false);
+      }, 1200);
+    }
+  };
+
+  const handleGenerateError = (message: string | { text: string }) => {
+    let description = "Unknown error";
+    if (typeof message === "string") {
+      description = message;
+    } else {
+      description = message.text;
+    }
+    toast.error(description);
+  };
+
+  const imagine = async () => {
+    if (loading) return false;
+    const text = promptRef.current?.textContent || "";
+    if (!text) return;
+    const { model } = useSettingStore.getState();
+    // setShowChallenge(false)
+    setLoading(true);
+    let prompt = "";
+    const ctrl = new AbortController();
+    await fetchEventSource("/api/prompt", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        // Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ model, presets, text }),
+      openWhenHidden: true,
+      signal: ctrl.signal,
+      async onopen(response) {
+        if (
+          response.status >= 400 &&
+          response.status < 500 &&
+          response.status !== 429
+        ) {
+          ctrl.abort();
+          throw new Error(t("Error.serverError"));
+        }
+      },
+      onmessage(msg) {
+        try {
+          const data = JSON.parse(msg.data);
+          if (msg.event === "message") {
+            prompt += data.text;
+            if (optimizedPromptRef.current) {
+              optimizedPromptRef.current.innerText = prompt;
+            }
+            if (data.finish) {
+              const id = uid(12);
+              setCurrentId(id);
+              const newRecord: Showcase = {
+                id,
+                text,
+                uuid: "",
+                prompt,
+                index: 0,
+                type: "image",
+                time: new Date(),
+              };
+              historyStore.add(newRecord);
+              setFinished(true);
+              setLoading(false);
+              ctrl.abort();
+            }
+          } else if (msg.event === "error") {
+            handleGenerateError(data);
+            setLoading(false);
+          }
+        } catch (err) {
+          console.error(err);
+          setLoading(false);
+        }
+      },
+      onclose: () => {
+        setLoading(false);
+      },
+      onerror: (err) => {
+        console.error(err);
+        ctrl.abort();
+        handleGenerateError(err);
+        setLoading(false);
+      },
+    });
+  };
+
+  const clearTextarea = () => {
+    setFinished(false);
+    if (promptRef.current) {
+      promptRef.current.innerText = "";
+      promptRef.current.focus();
+    }
+    if (optimizedPromptRef.current) {
+      optimizedPromptRef.current.innerText = "";
+    }
+  };
+
+  const updateSettings = (key: keyof Presets, val: string) => {
+    presets[key] = val === "null" ? "" : val;
+    setPresets(presets);
+  };
+
+  const updateOptimizedPrompt = () => {
+    const optimizedPrompt = optimizedPromptRef.current?.textContent || "";
+    if (optimizedPrompt) {
+      historyStore.update(currentId, { prompt: optimizedPrompt });
+    }
+  };
+
+  const handleImageUnderstand = (text: string) => {
+    if (promptRef.current) {
+      promptRef.current.innerText = text;
+    }
+  };
+
+  const loadMore = async () => {
+    const nextPage = currentPage + 1;
+    const total = nextPage * PAGE_SIZE;
+    setHistoryList(historyStore.history.slice(0, total));
+    setCurrentPage(nextPage);
+  };
+
+  useLayoutEffect(() => {
+    setHistoryList(historyStore.history.slice(0, PAGE_SIZE));
+  }, [historyStore.history]);
+
+  return (
+    <div className="w-screen">
+      <div className="bg fixed -z-10 h-full w-full"></div>
+      <main>
+        <Header className="shadow-none bg-transparent" />
+        <div className="h-full mx-auto max-w-screen-xl max-sm:px-6 max-sm:pt-8">
+          <Tabs
+            defaultValue="generator"
+            className="w-full pt-5 text-center max-sm:pt-0"
+            activationMode="automatic"
+          >
+            <TabsList className="rounded-full mx-auto select-none bg-slate-200/60">
+              <TabsTrigger className="rounded-full" value="generator">
+                <PencilRuler className="w-4 h-4 mr-1" />{" "}
+                {t("Prompt.tabs.generator")}
+              </TabsTrigger>
+              <TabsTrigger className="rounded-full" value="history">
+                <History className="w-4 h-4 mr-1" /> {t("Prompt.tabs.history")}
+              </TabsTrigger>
+            </TabsList>
+            <TabsContent className="text-left" value="generator">
+              <section className="text-center pt-10 pb-10 max-sm:pt-6 max-sm:pb-6">
+                <h1 className="text-2xl font-bold text-slate-800">
+                  <span className="colorful">{t("Prompt.title")}</span>
+                </h1>
+                <p className="py-6 text-base text-gray-600 leading-5">
+                  {t("Prompt.description")}
+                </p>
+                <div className="flex flex-wrap justify-center gap-2 max-sm:w-64 max-sm:mx-auto">
+                  <div className="inline-flex items-center px-3 py-1 text-xs rounded-full  bg-amber-400/10 text-amber-400 border border-amber-400/20">
+                    Pollinations AI
+                  </div>
+                  <div className="inline-flex items-center px-3 py-1 text-xs rounded-full  bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
+                    {t("Prompt.allFree")}
+                  </div>
+                  <div className="inline-flex items-center px-3 py-1 text-xs rounded-full  bg-blue-500/10 text-blue-500 border border-blue-500/20">
+                    {t("Prompt.noLogin")}
+                  </div>
+                  <div className="inline-flex items-center px-3 py-1 text-xs rounded-full  bg-purple-500/10 text-purple-500 border border-purple-500/20">
+                    {t("Prompt.unlimitedGenerations")}
+                  </div>
+                </div>
+              </section>
+              <section className="flex flex-col w-4/5 mx-auto max-sm:w-full">
+                <div className="flex justify-between">
+                  <h2 className="font-medium leading-8 text-gray-700">
+                    {t("Prompt.generator.label")}
+                  </h2>
+                  <div className="flex items-center space-x-2">
+                    <Select
+                      value={settingStore.model}
+                      onValueChange={(value) =>
+                        settingStore.update("model", value)
+                      }
+                    >
+                      <SelectTrigger className="w-auto h-8 py-0 px-0 text-black/70 shadow-none hover:text-black gap-2 select-none bg-transparent border-none focus:outline-none focus:ring-0 focus:ring-offset-0">
+                        <Bot className="w-4 h-4 text-black/70" />
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectGroup>
+                          <SelectItem value="openai">
+                            OpenAI GPT-4o Mini
+                          </SelectItem>
+                          <SelectItem value="openai-fast">
+                            OpenAI GPT-4.1 Nano
+                          </SelectItem>
+                          <SelectItem value="deepseek-reasoning">
+                            DeepSeek R1
+                          </SelectItem>
+                          <SelectItem value="deepseek">DeepSeek V3</SelectItem>
+                          <SelectItem value="grok">xAI Grok-3 Mini</SelectItem>
+                          <SelectItem value="mistral">Mistral Small</SelectItem>
+                          <SelectItem value="phi">Phi-4 Mini</SelectItem>
+                        </SelectGroup>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <div className="flex flex-col justify-between min-h-[144px] border pt-4 px-4 mt-2 mb-4 rounded-xl bg-white/30 overflow-hidden transition-all duration-300">
+                  <div
+                    ref={promptRef}
+                    className="min-h-[64px] overflow-y-auto outline-none"
+                    contentEditable={loading ? "false" : "plaintext-only"}
+                    autoFocus
+                  ></div>
+                  <div
+                    ref={optimizedPromptRef}
+                    className="text-lg border-t mt-2 pt-2 pb-2 outline-none empty:border-t-0 empty:pt-0 empty:h-0"
+                    contentEditable={loading ? "false" : "plaintext-only"}
+                    onBlur={() => updateOptimizedPrompt()}
+                  ></div>
+                  <div
+                    className={cn(
+                      "gap-4 pb-1",
+                      showSettings ? "flex" : "hidden"
+                    )}
+                  >
+                    <Select
+                      onValueChange={(value) => updateSettings("ar", value)}
+                    >
+                      <SelectTrigger className="w-auto h-8 py-0 px-0 text-black/70 hover:text-black gap-2 select-none bg-transparent border-none focus:outline-none focus:ring-0 focus:ring-offset-0">
+                        <Proportions className="w-4 h-4" />
+                        <SelectValue
+                          placeholder={t("Prompt.generator.aspectRatios")}
+                        />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <div className="grid grid-cols-2">
+                          <SelectGroup className="w-[160px]">
+                            <SelectLabel className="font-normal text-gray-600">
+                              {t("Prompt.generator.default")}
+                            </SelectLabel>
+                            <SelectItem value="1:1">1:1</SelectItem>
+                            <SelectLabel className="font-normal text-gray-600">
+                              {t("Prompt.generator.moviesAndDisplays")}
+                            </SelectLabel>
+                            <SelectItem value="16:9">16:9</SelectItem>
+                            <SelectItem value="5:8">5:8</SelectItem>
+                            <SelectLabel className="font-normal text-gray-600">
+                              {t("Prompt.generator.socialPlatforms")}
+                            </SelectLabel>
+                            <SelectItem value="9:16">9:16</SelectItem>
+                            <SelectLabel className="font-normal text-gray-600">
+                              {t("Prompt.generator.fullScreenMobilePhone")}
+                            </SelectLabel>
+                            <SelectItem value="13:6">13:6</SelectItem>
+                            <SelectItem value="6:13">6:13</SelectItem>
+                            <SelectLabel className="font-normal text-gray-600">
+                              {t("Prompt.generator.print")}
+                            </SelectLabel>
+                            <SelectItem value="5:4">5:4</SelectItem>
+                          </SelectGroup>
+                          <SelectGroup className="w-[160px]">
+                            <SelectLabel className="font-normal text-gray-600">
+                              {t("Prompt.generator.instagram")}
+                            </SelectLabel>
+                            <SelectItem value="4:5">4:5</SelectItem>
+                            <SelectLabel className="font-normal text-gray-600">
+                              {t("Prompt.generator.earlyVideosAndPhotos")}
+                            </SelectLabel>
+                            <SelectItem value="4:3">4:3</SelectItem>
+                            <SelectLabel className="font-normal text-gray-600">
+                              {t("Prompt.generator.standardSLRCamera")}
+                            </SelectLabel>
+                            <SelectItem value="3:2">3:2</SelectItem>
+                            <SelectItem value="2:3">2:3</SelectItem>
+                            <SelectLabel className="font-normal text-gray-600">
+                              {t("Prompt.generator.panoramicPhotography")}
+                            </SelectLabel>
+                            <SelectItem value="2:1">2:1</SelectItem>
+                            <SelectLabel className="font-normal text-gray-600">
+                              {t("Prompt.generator.portraitPhotography")}
+                            </SelectLabel>
+                            <SelectItem value="1:2">1:2</SelectItem>
+                          </SelectGroup>
+                        </div>
+                      </SelectContent>
+                    </Select>
+                    <Separator className="h-4 my-2" orientation="vertical" />
+                    <Select
+                      onValueChange={(value) => updateSettings("style", value)}
+                    >
+                      <SelectTrigger className="w-auto h-8 py-0 px-0 text-black/70 hover:text-black gap-2 select-none bg-transparent border-none focus:outline-none focus:ring-0 focus:ring-offset-0">
+                        <Brush className="w-4 h-4" />
+                        <SelectValue
+                          placeholder={t("Prompt.generator.style")}
+                        />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <div className="grid grid-cols-2">
+                          <SelectGroup className="w-[160px]">
+                            <SelectItem value="null">
+                              {t("Prompt.generator.noStyle")}
+                            </SelectItem>
+                            <SelectItem value="Photography">
+                              {t("Prompt.generator.photography")}
+                            </SelectItem>
+                            <SelectItem value="Film">
+                              {t("Prompt.generator.film")}
+                            </SelectItem>
+                            <SelectItem value="Anime style">
+                              {t("Prompt.generator.animeStyle")}
+                            </SelectItem>
+                            <SelectItem value="Comics">
+                              {t("Prompt.generator.comics")}
+                            </SelectItem>
+                            <SelectItem value="Studio Ghibli">
+                              {t("Prompt.generator.studioGhibli")}
+                            </SelectItem>
+                            <SelectItem value="Illustration">
+                              {t("Prompt.generator.illustration")}
+                            </SelectItem>
+                            <SelectItem value="Cyberpunk">
+                              {t("Prompt.generator.cyberpunk")}
+                            </SelectItem>
+                            <SelectItem value="Pixel art">
+                              {t("Prompt.generator.pixelArt")}
+                            </SelectItem>
+                            <SelectItem value="Minimalist design">
+                              {t("Prompt.generator.minimalistDesign")}
+                            </SelectItem>
+                            <SelectItem value="Surrealism">
+                              {t("Prompt.generator.surrealism")}
+                            </SelectItem>
+                            <SelectItem value="Realism">
+                              {t("Prompt.generator.realism")}
+                            </SelectItem>
+                          </SelectGroup>
+                          <SelectGroup className="w-[160px]">
+                            <SelectItem value="Washpainting">
+                              {t("Prompt.generator.washpainting")}
+                            </SelectItem>
+                            <SelectItem value="Chinese traditional painting">
+                              {t("Prompt.generator.chineseTraditionalPainting")}
+                            </SelectItem>
+                            <SelectItem value="Sketch">
+                              {t("Prompt.generator.sketch")}
+                            </SelectItem>
+                            <SelectItem value="Watercolor painting">
+                              {t("Prompt.generator.watercolorPainting")}
+                            </SelectItem>
+                            <SelectItem value="Oil painting">
+                              {t("Prompt.generator.oilPainting")}
+                            </SelectItem>
+                            <SelectItem value="Manuscript">
+                              {t("Prompt.generator.manuscript")}
+                            </SelectItem>
+                            <SelectItem value="Ukiyoe">
+                              {t("Prompt.generator.ukiyoe")}
+                            </SelectItem>
+                            <SelectItem value="Claymation">
+                              {t("Prompt.generator.claymation")}
+                            </SelectItem>
+                            <SelectItem value="Kirigami">
+                              {t("Prompt.generator.kirigami")}
+                            </SelectItem>
+                            <SelectItem value="Low-poly">
+                              {t("Prompt.generator.lowPoly")}
+                            </SelectItem>
+                            <SelectItem value="Holographic">
+                              {t("Prompt.generator.holographic")}
+                            </SelectItem>
+                            <SelectItem value="3D model">
+                              {t("Prompt.generator.3DModel")}
+                            </SelectItem>
+                          </SelectGroup>
+                        </div>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <div className="flex justify-between">
+                  <div className="flex gap-1 p-1.5 rounded-full bg-white/50 transition-opacity duration-300">
+                    <Button
+                      className={cn(
+                        "w-6 h-6 p-1",
+                        showSettings ? "text-red-400" : ""
+                      )}
+                      size="icon"
+                      variant="ghost"
+                      title={t("Prompt.generator.presetParameters")}
+                      onClick={() => setShowSettings(!showSettings)}
+                    >
+                      <SlidersHorizontal className="h-full w-full" />
+                    </Button>
+                    <div className="py-1">
+                      <Separator orientation="vertical" />
+                    </div>
+                    <Button
+                      className="w-6 h-6 p-1"
+                      size="icon"
+                      variant="ghost"
+                      title={t("Prompt.generator.imageToPrompt")}
+                    >
+                      <ImageUploader
+                        onMessage={handleImageUnderstand}
+                        onStart={() => setWaitingVision(true)}
+                        onFinish={() => setWaitingVision(false)}
+                      >
+                        {waitingVision ? (
+                          <LoaderCircle className="h-full w-full animate-spin" />
+                        ) : (
+                          <ScanEye className="h-full w-full" />
+                        )}
+                      </ImageUploader>
+                    </Button>
+                    {finished ? (
+                      <>
+                        <div className="py-1">
+                          <Separator orientation="vertical" />
+                        </div>
+                        <Button
+                          className="w-6 h-6 p-1"
+                          size="icon"
+                          variant="ghost"
+                          title={t("Prompt.generator.copyPrompt")}
+                          onClick={() => handleCopy()}
+                        >
+                          {waitingCopy ? (
+                            <Check className="h-full w-full" />
+                          ) : (
+                            <Copy className="h-full w-full" />
+                          )}
+                        </Button>
+                      </>
+                    ) : null}
+                  </div>
+                  <div className="flex gap-2 select-none">
+                    <Button
+                      className="rounded-full bg-white/50 shadow-none"
+                      size="sm"
+                      variant="outline"
+                      onClick={() => clearTextarea()}
+                    >
+                      {t("Prompt.generator.clear")}
+                    </Button>
+                    <Button
+                      className="px-5 rounded-full bg-blue-600 text-base hover:bg-blue-700"
+                      disabled={loading}
+                      size="sm"
+                      onClick={() => imagine()}
+                    >
+                      {loading ? (
+                        <Loader2 className="mr-1 h-4 w-4 animate-spin" />
+                      ) : finished ? (
+                        <RotateCcw className="mr-1 h-4 w-4" />
+                      ) : (
+                        <Sparkles className="mr-1 h-4 w-4" />
+                      )}
+                      {t("Prompt.generator.imagine")}
+                    </Button>
+                  </div>
+                </div>
+              </section>
+              {historyByToday.length > 0 ? (
+                <section className="w-4/5 mx-auto mt-10 text-sm text-gray-600 max-sm:w-full">
+                  <h2 className="text-base text-center my-4">
+                    {t("Prompt.history.title")}
+                  </h2>
+                  {historyByToday.map((item, idx) => {
+                    return (
+                      <HistoryItem
+                        key={idx}
+                        item={item}
+                        onDelete={(id) => historyStore.remove(id)}
+                      ></HistoryItem>
+                    );
+                  })}
+                </section>
+              ) : null}
+              <section className="w-4/5 mx-auto mt-10 text-sm text-gray-600 max-sm:w-full">
+                <h2 className="text-base text-center my-4">
+                  {t("Prompt.faq.title")}
+                </h2>
+                <Accordion type="multiple">
+                  <AccordionItem value="item-1">
+                    <AccordionTrigger className="text-left">
+                      {t("Prompt.faq.theFirstQuestion")}
+                    </AccordionTrigger>
+                    <AccordionContent>
+                      {t("Prompt.faq.theFirstAnswer")}
+                    </AccordionContent>
+                  </AccordionItem>
+                  <AccordionItem value="item-2">
+                    <AccordionTrigger className="text-left">
+                      {t("Prompt.faq.theSecondQuestion")}
+                    </AccordionTrigger>
+                    <AccordionContent>
+                      {t("Prompt.faq.theSecondAnswer")}
+                    </AccordionContent>
+                  </AccordionItem>
+                  <AccordionItem value="item-3">
+                    <AccordionTrigger className="text-left">
+                      {t("Prompt.faq.theThirdQuestion")}
+                    </AccordionTrigger>
+                    <AccordionContent>
+                      {t("Prompt.faq.theThirdAnswer")}
+                    </AccordionContent>
+                  </AccordionItem>
+                  <AccordionItem value="item-4">
+                    <AccordionTrigger>
+                      {t("Prompt.faq.theFourthQuestion")}
+                    </AccordionTrigger>
+                    <AccordionContent className="text-left">
+                      {t.rich("Prompt.faq.theFourthAnswer", {
+                        strong: (chunks) => <strong>{chunks}</strong>,
+                      })}
+                    </AccordionContent>
+                  </AccordionItem>
+                  <AccordionItem value="item-5">
+                    <AccordionTrigger className="text-left">
+                      {t("Prompt.faq.theFifthQuestion")}
+                    </AccordionTrigger>
+                    <AccordionContent>
+                      {t.rich("Prompt.faq.theFifthAnswer", {
+                        link: (chunks) => (
+                          <a href="https://pollinations.ai/" target="_blank">
+                            {chunks}
+                          </a>
+                        ),
+                      })}
+                    </AccordionContent>
+                  </AccordionItem>
+                </Accordion>
+              </section>
+              <footer className="mx-auto mt-16 mb-4 text-center">
+                <p className="text-sm text-gray-500">
+                  {t("Prompt.disclaimer")}
+                </p>
+              </footer>
+            </TabsContent>
+            <TabsContent className="text-left pt-5" value="history">
+              <section className="w-4/5 mx-auto text-sm text-gray-600 max-sm:w-full">
+                {historyList.length > 0 ? (
+                  historyList.map((item) => {
+                    return (
+                      <HistoryItem
+                        key={item.id}
+                        item={item}
+                        onDelete={(id) => historyStore.remove(id)}
+                      ></HistoryItem>
+                    );
+                  })
+                ) : (
+                  <div className="text-gray-500 text-center">
+                    {t("Prompt.noHistory")}
+                  </div>
+                )}
+              </section>
+              <div
+                className={
+                  showLoadMore
+                    ? "text-center cursor-pointer text-sm hover:underline underline-offset-4"
+                    : "hidden"
+                }
+                onClick={() => loadMore()}
+              >
+                {t("Prompt.loadMore")}
+              </div>
+            </TabsContent>
+          </Tabs>
+        </div>
+      </main>
+    </div>
+  );
+}
+
+export default memo(Prompt);
