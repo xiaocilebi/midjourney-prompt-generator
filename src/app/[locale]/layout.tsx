@@ -1,8 +1,6 @@
 import type { Metadata, Viewport } from "next";
-import { NextIntlClientProvider, hasLocale } from "next-intl";
+import { NextIntlClientProvider } from "next-intl";
 import { getTranslations } from "next-intl/server";
-import { notFound } from "next/navigation";
-import { routing } from "@/i18n/routing";
 import { Toaster } from "@/components/ui/sonner";
 import "./globals.css";
 
@@ -55,20 +53,11 @@ export const viewport: Viewport = {
 
 export default async function RootLayout({
   children,
-  params,
 }: Readonly<{
   children: React.ReactNode;
-  params: Promise<{ locale: string }>;
 }>) {
-  // Ensure that the incoming `locale` is valid
-  const { locale = "en" } = await params;
-  console.log(locale);
-  if (!hasLocale(routing.locales, locale)) {
-    notFound();
-  }
-
   return (
-    <html lang={locale}>
+    <html lang="en">
       <body className="antialiased">
         <NextIntlClientProvider>{children}</NextIntlClientProvider>
         <Toaster />
