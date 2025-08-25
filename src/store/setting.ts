@@ -1,22 +1,22 @@
-import { create } from 'zustand'
-import { persist } from 'zustand/middleware'
+import { create } from "zustand";
+import { persist } from "zustand/middleware";
 
 type SettingState = {
-  model: string
-}
+  model: string;
+};
 
 type SettingActions = {
-  update: (key: string, val: any) => void
-}
+  update: (key: string, val: unknown) => void;
+};
 
 export const useSettingStore = create<SettingState & SettingActions>()(
   persist(
     (set) => ({
-      model: 'openai',
+      model: "openai",
       update: (key, val) => set(() => ({ [key]: val })),
     }),
     {
-      name: 'MJShowcaseSettings',
-    },
-  ),
-)
+      name: "MJShowcaseSettings",
+    }
+  )
+);
