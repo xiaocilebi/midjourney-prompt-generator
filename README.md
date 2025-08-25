@@ -110,27 +110,24 @@ Vercel, the creators of Next.js, provides the best experience for deploying Next
 5.  **Deploy**: Click the "Deploy" button. Vercel will begin building and deploying your application.
 6.  **Access your application**: Once deployed, Vercel will provide a unique URL to access your live application. Vercel supports continuous deployment by default, automatically redeploying every time you push to the connected branch.
 
-### ☁️ Deploy to Cloudflare Pages
+### ☁️ Deploy to Cloudflare Workers
 
-Cloudflare Pages offers a simple and free way to host your application with global CDN and fast loading times.
+Cloudflare Workers offers a simple and free way to host your application with global CDN and fast loading times.
 
 1.  **Push to Git repository**: Ensure your Next.js application has been pushed to a GitHub repository.
 2.  **Create a Cloudflare account**: If you don't have a Cloudflare account, visit [cloudflare.com](https://www.cloudflare.com/) to sign up.
 3.  **Create a new project**:
     - Log in to your Cloudflare Dashboard.
-    - Navigate to "Workers & Pages" > "Create" > "Pages" > "Connect to Git".
+    - Navigate to "Workers & Pages" > "Create" > "Workers" > "Connect to Git".
     - Authorize Cloudflare to access your GitHub account.
 4.  **Select your Git repository**: Choose your "Midjourney Prompt Generator" repository.
 5.  **Configure your project**:
     - Provide a project name.
     - Cloudflare Pages will usually auto-detect Next.js projects and pre-fill build settings. Ensure the following settings are correct:
-      - **Framework**: Next.js
-      - **Build command**: `npm run build` or `yarn build` or `pnpm build`
-      - **Build output directory**: `out` (if your Next.js is configured for static export) or `.vercel/output/static` (if using `@cloudflare/next-on-pages` adapter). For Next.js's SSR capabilities, an additional adapter like `@cloudflare/next-on-pages` might be required.
-      - **Environment variables**: If your application needs them, you can add environment variables in the Cloudflare Pages project settings.
-      - **Node.js compatibility**: If your Next.js application uses server-side features (like API routes or `getServerSideProps`), you might need to add the `nodejs_compat` compatibility flag in your Cloudflare Pages project settings. Edit "Compatibility flags" in the "Runtime" section and add `nodejs_compat`.
-6.  **Deploy**: Click the "Save and Deploy" button. Cloudflare Pages will install dependencies, build your project, and deploy it to their global network.
-7.  **Access your application**: After deployment, you will receive a default `project-name.pages.dev` subdomain. You can also configure a custom domain in your project settings.
+      - **Deploy command**: Change the deployment command to `npm run deploy`。
+      - **Environment variables**: If your application needs them, you can add environment variables in the Cloudflare Workers project settings.
+6.  **Deploy**: Click the "Save and Deploy" button. Cloudflare Workers will install dependencies, build your project, and deploy it to their global network.
+7.  **Access your application**: After deployment, Cloudflare will provision a subdomain. You can also configure a custom domain in your project settings.
 
 ## 🤝 Contributing
 

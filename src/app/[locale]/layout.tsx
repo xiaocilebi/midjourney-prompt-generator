@@ -1,38 +1,47 @@
 import type { Metadata, Viewport } from "next";
-import { NextIntlClientProvider } from "next-intl";
+import { NextIntlClientProvider, hasLocale } from "next-intl";
+import { getTranslations } from "next-intl/server";
+import { notFound } from "next/navigation";
+import { routing } from "@/i18n/routing";
 import { Toaster } from "@/components/ui/sonner";
 import "./globals.css";
 
 const BASE_URL = process.env.BASE_URL || "https://mj.u14.app";
 
-const title = "MidJourney Prompt Generator";
-const description =
-  "Give your ideas and let AI use its imagination. Everyone can be a master of prompt.";
-export const metadata: Metadata = {
-  metadataBase: new URL(BASE_URL),
-  title,
-  description,
-  referrer: "no-referrer",
-  icons: {
-    icon: {
-      type: "image/png",
-      url: "/logo.png",
-    },
-  },
-  openGraph: {
-    type: "website",
-    url: BASE_URL,
-    title,
-    description,
-    siteName: title,
-    images: [
-      {
-        url: BASE_URL + "/og.jpg",
-        alt: title,
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}): Promise<Metadata> {
+  const { locale } = await params;
+  const t = await getTranslations({ locale });
+
+  return {
+    metadataBase: new URL(BASE_URL),
+    title: t("Metadata.title"),
+    description: t("Metadata.description"),
+    referrer: "no-referrer",
+    icons: {
+      icon: {
+        type: "image/png",
+        url: "/logo.png",
       },
-    ],
-  },
-};
+    },
+    openGraph: {
+      type: "website",
+      url: BASE_URL,
+      title: t("Metadata.title"),
+      description: t("Metadata.description"),
+      siteName: t("Metadata.title"),
+      images: [
+        {
+          url: BASE_URL + "/og.jpg",
+          alt: t("Metadata.title"),
+        },
+      ],
+    },
+  };
+}
 
 export const viewport: Viewport = {
   width: "device-width",
@@ -46,11 +55,19 @@ export const viewport: Viewport = {
 
 export default async function RootLayout({
   children,
+  params,
 }: Readonly<{
   children: React.ReactNode;
+  params: Promise<{ locale: string }>;
 }>) {
+  // Ensure that the incoming `locale` is valid
+  const { locale = "en" } = await params;
+  if (!hasLocale(routing.locales, locale)) {
+    notFound();
+  }
+
   return (
-    <html lang="en">
+    <html lang={locale}>
       <body className="antialiased">
         <NextIntlClientProvider>{children}</NextIntlClientProvider>
         <Toaster />

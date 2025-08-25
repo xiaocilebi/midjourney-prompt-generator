@@ -8,7 +8,6 @@ import {
 import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
 import { imageCreationPrompt } from "@/constants/prompt";
 
-export const runtime = "edge";
 export const maxDuration = 60;
 
 type ThinkingConfig = {

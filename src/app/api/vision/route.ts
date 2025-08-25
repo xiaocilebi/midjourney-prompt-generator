@@ -5,8 +5,6 @@ import { imageUnderstandPrompt } from "@/constants/prompt";
 
 const POLLINATIONS_AI_API_KEY = process.env.POLLINATIONS_AI_API_KEY;
 
-export const runtime = "edge";
-
 export async function POST(req: NextRequest) {
   const formData = await req.formData();
   const file = formData.get("file") as File;
