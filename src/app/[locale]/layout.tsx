@@ -6,7 +6,7 @@ import { routing } from "@/i18n/routing";
 import { Toaster } from "@/components/ui/sonner";
 import "./globals.css";
 
-const BASE_URL = process.env.BASE_URL || "";
+const BASE_URL = process.env.BASE_URL || "https://mj.u14.app";
 
 export async function generateMetadata({
   params,

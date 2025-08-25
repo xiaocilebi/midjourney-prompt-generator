@@ -3,7 +3,7 @@ import { streamText } from "ai";
 import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
 import { imageUnderstandPrompt } from "@/constants/prompt";
 
-const POLLINATIONS_AI_API_KEY = process.env.POLLINATIONS_AI_API_KEY || "";
+const POLLINATIONS_AI_API_KEY = process.env.POLLINATIONS_AI_API_KEY;
 
 export async function POST(req: NextRequest) {
   const formData = await req.formData();

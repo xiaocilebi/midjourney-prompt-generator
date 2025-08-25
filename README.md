@@ -118,7 +118,7 @@ Cloudflare Pages offers a simple and free way to host your application with glob
 2.  **Create a Cloudflare account**: If you don't have a Cloudflare account, visit [cloudflare.com](https://www.cloudflare.com/) to sign up.
 3.  **Create a new project**:
     - Log in to your Cloudflare Dashboard.
-    - Navigate to "Workers & Pages" > "Create application" > "Pages" > "Connect to Git".
+    - Navigate to "Workers & Pages" > "Create" > "Pages" > "Connect to Git".
     - Authorize Cloudflare to access your GitHub account.
 4.  **Select your Git repository**: Choose your "Midjourney Prompt Generator" repository.
 5.  **Configure your project**:

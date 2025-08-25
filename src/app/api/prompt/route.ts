@@ -17,7 +17,7 @@ type ThinkingConfig = {
   onMessage: (event: string, data: string, finished?: boolean) => void;
 };
 
-const POLLINATIONS_AI_API_KEY = process.env.POLLINATIONS_AI_API_KEY || "";
+const POLLINATIONS_AI_API_KEY = process.env.POLLINATIONS_AI_API_KEY;
 
 function generateMessage(text: string, params: Record<string, JSONValue> = {}) {
   return JSON.stringify({ text, ...params });

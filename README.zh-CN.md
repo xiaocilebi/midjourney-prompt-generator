@@ -118,7 +118,7 @@ Cloudflare Pages 提供了一个简单免费的方式来托管您的应用程序
 2.  **创建 Cloudflare 账户**：如果您还没有 Cloudflare 账户，请访问 [cloudflare.com](https://www.cloudflare.com/) 注册一个。
 3.  **创建新项目**：
     - 登录 Cloudflare Dashboard。
-    - 导航到 "Workers & Pages" > "Create application" (创建应用程序) > "Pages" > "Connect to Git" (连接到 Git)。
+    - 导航到 "Workers & Pages" > "Create" (创建) > "Pages" > "Connect to Git" (连接到 Git)。
     - 授权 Cloudflare 访问您的 GitHub 账户。
 4.  **选择您的 Git 仓库**：选择您的 "Midjourney Prompt Generator" 仓库。
 5.  **配置您的项目**：
