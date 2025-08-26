@@ -20,6 +20,7 @@
       "presetParameters": "Preset Parameters",
       "imageToPrompt": "Image to prompt",
       "copyPrompt": "Copy prompt",
+      "copyOptimizedPrompt": "Copy optimized prompt",
       "clear": "Clear",
       "imagine": "Imagine",
       "aspectRatios": "Aspect Ratios",

@@ -20,6 +20,7 @@
       "presetParameters": "预设参数",
       "imageToPrompt": "图片转提示词",
       "copyPrompt": "复制提示词",
+      "copyOptimizedPrompt": "复制优化后提示词",
       "clear": "清空",
       "imagine": "想象",
       "aspectRatios": "宽高比",

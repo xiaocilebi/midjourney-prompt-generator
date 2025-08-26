@@ -16,6 +16,7 @@ import {
   Loader2,
   ScanEye,
   LoaderCircle,
+  ClipboardCopy,
 } from "lucide-react";
 import { fetchEventSource } from "@microsoft/fetch-event-source";
 import copy from "copy-to-clipboard";
@@ -43,6 +44,7 @@ import { Separator } from "@/components/ui/separator";
 import Header from "@/components/header";
 import { useSettingStore } from "@/store/setting";
 import { useHistoryStore } from "@/store/history";
+import { uploadMiddleware } from "@/utils/upload";
 import { cn } from "@/utils/style";
 import { uid } from "radash";
 
@@ -64,8 +66,11 @@ function Prompt() {
   const [presets, setPresets] = useState<Presets>({});
   const [showSettings, setShowSettings] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(false);
-  const [waitingCopy, setWaitingCopy] = useState<boolean>(false);
+  const [waitingCopyPrompt, setWaitingCopyPrompt] = useState<boolean>(false);
+  const [waitingCopyOptimizedPrompt, setWaitingCopyOptimizedPrompt] =
+    useState<boolean>(false);
   const [waitingVision, setWaitingVision] = useState<boolean>(false);
+  const [canCopyPrompt, setCanCopyPrompt] = useState<boolean>(false);
   const [historyList, setHistoryList] = useState<Showcase[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
   const showLoadMore = useMemo(() => {
@@ -75,12 +80,22 @@ function Prompt() {
     return historyStore.history.filter((item) => dayjs(item.time).isToday());
   }, [historyStore.history]);
 
-  const handleCopy = () => {
+  const handleCopyPrompt = () => {
+    if (promptRef.current) {
+      setWaitingCopyPrompt(true);
+      copy(promptRef.current?.textContent || "");
+      setTimeout(() => {
+        setWaitingCopyPrompt(false);
+      }, 1200);
+    }
+  };
+
+  const handleCopyOptimizedPrompt = () => {
     if (optimizedPromptRef.current) {
-      setWaitingCopy(true);
+      setWaitingCopyOptimizedPrompt(true);
       copy(optimizedPromptRef.current?.textContent || "");
       setTimeout(() => {
-        setWaitingCopy(false);
+        setWaitingCopyOptimizedPrompt(false);
       }, 1200);
     }
   };
@@ -171,6 +186,8 @@ function Prompt() {
 
   const clearTextarea = () => {
     setFinished(false);
+    setCanCopyPrompt(false);
+    setWaitingVision(false);
     if (promptRef.current) {
       promptRef.current.innerText = "";
       promptRef.current.focus();
@@ -196,6 +213,66 @@ function Prompt() {
     if (promptRef.current) {
       promptRef.current.innerText = text;
     }
+  };
+
+  const updateUploadStatus = (progressing: boolean) => {
+    if (progressing) {
+      setCanCopyPrompt(false);
+      setWaitingVision(true);
+    } else {
+      setCanCopyPrompt(true);
+      setWaitingVision(false);
+    }
+  };
+
+  const handleFileUpload = async (file: File) => {
+    updateUploadStatus(true);
+    await uploadMiddleware({
+      file,
+      onSuccess: async (newFile) => {
+        const formData = new FormData();
+        formData.append("file", newFile);
+
+        const response = await fetch("/api/vision", {
+          method: "POST",
+          body: formData,
+        });
+
+        if (response.ok && response.body) {
+          const reader = response.body.getReader();
+          const decoder = new TextDecoder("utf-8");
+          let text = "";
+
+          while (true) {
+            const { value, done } = await reader.read();
+            if (done) {
+              updateUploadStatus(false);
+              break;
+            }
+
+            const chunk = decoder.decode(value, { stream: true });
+            text += chunk;
+            handleImageUnderstand(text);
+          }
+        }
+      },
+      onError: (error) => {
+        toast.error(error);
+      },
+    });
+  };
+
+  const handlePaste = async (ev: React.ClipboardEvent<HTMLDivElement>) => {
+    const file = ev.clipboardData?.files[0];
+    if (file) {
+      ev.preventDefault();
+      await handleFileUpload(file);
+    }
+  };
+
+  const handleDrop = async (ev: React.DragEvent<HTMLDivElement>) => {
+    ev.preventDefault();
+    await handleFileUpload(ev.dataTransfer?.files[0]);
   };
 
   const loadMore = async () => {
@@ -273,22 +350,33 @@ function Prompt() {
                           <SelectItem value="openai">
                             OpenAI GPT-4o Mini
                           </SelectItem>
+                          <SelectItem value="gpt-5-nano">
+                            OpenAI GPT-5 Nano
+                          </SelectItem>
                           <SelectItem value="openai-fast">
                             OpenAI GPT-4.1 Nano
+                          </SelectItem>
+                          <SelectItem value="openai-reasoning">
+                            OpenAI o3
+                          </SelectItem>
+                          <SelectItem value="gemini">
+                            Gemini 2.5 Flash Lite
                           </SelectItem>
                           <SelectItem value="deepseek-reasoning">
                             DeepSeek R1
                           </SelectItem>
-                          <SelectItem value="deepseek">DeepSeek V3</SelectItem>
-                          <SelectItem value="grok">xAI Grok-3 Mini</SelectItem>
                           <SelectItem value="mistral">Mistral Small</SelectItem>
-                          <SelectItem value="phi">Phi-4 Mini</SelectItem>
                         </SelectGroup>
                       </SelectContent>
                     </Select>
                   </div>
                 </div>
-                <div className="flex flex-col justify-between min-h-[144px] border pt-4 px-4 mt-2 mb-4 rounded-xl bg-white/30 overflow-hidden transition-all duration-300">
+                <div
+                  className="flex flex-col justify-between min-h-[144px] border pt-4 px-4 mt-2 mb-4 rounded-xl bg-white/30 overflow-hidden transition-all duration-300"
+                  onPaste={handlePaste}
+                  onDrop={handleDrop}
+                  onDragOver={(ev) => ev.preventDefault()}
+                >
                   <div
                     ref={promptRef}
                     className="min-h-[64px] overflow-y-auto outline-none"
@@ -478,24 +566,40 @@ function Prompt() {
                     <div className="py-1">
                       <Separator orientation="vertical" />
                     </div>
-                    <Button
-                      className="w-6 h-6 p-1"
-                      size="icon"
-                      variant="ghost"
-                      title={t("Prompt.generator.imageToPrompt")}
-                    >
-                      <ImageUploader
-                        onMessage={handleImageUnderstand}
-                        onStart={() => setWaitingVision(true)}
-                        onFinish={() => setWaitingVision(false)}
+                    {canCopyPrompt ? (
+                      <Button
+                        className="w-6 h-6 p-1"
+                        size="icon"
+                        variant="ghost"
+                        title={t("Prompt.generator.copyPrompt")}
+                        onClick={() => handleCopyPrompt()}
                       >
-                        {waitingVision ? (
-                          <LoaderCircle className="h-full w-full animate-spin" />
+                        {waitingCopyPrompt ? (
+                          <Check className="h-full w-full" />
                         ) : (
-                          <ScanEye className="h-full w-full" />
+                          <ClipboardCopy className="h-full w-full" />
                         )}
-                      </ImageUploader>
-                    </Button>
+                      </Button>
+                    ) : (
+                      <Button
+                        className="w-6 h-6 p-1"
+                        size="icon"
+                        variant="ghost"
+                        title={t("Prompt.generator.imageToPrompt")}
+                      >
+                        <ImageUploader
+                          onMessage={handleImageUnderstand}
+                          onStart={() => updateUploadStatus(true)}
+                          onFinish={() => updateUploadStatus(false)}
+                        >
+                          {waitingVision ? (
+                            <LoaderCircle className="h-full w-full animate-spin" />
+                          ) : (
+                            <ScanEye className="h-full w-full" />
+                          )}
+                        </ImageUploader>
+                      </Button>
+                    )}
                     {finished ? (
                       <>
                         <div className="py-1">
@@ -505,10 +609,10 @@ function Prompt() {
                           className="w-6 h-6 p-1"
                           size="icon"
                           variant="ghost"
-                          title={t("Prompt.generator.copyPrompt")}
-                          onClick={() => handleCopy()}
+                          title={t("Prompt.generator.copyOptimizedPrompt")}
+                          onClick={() => handleCopyOptimizedPrompt()}
                         >
-                          {waitingCopy ? (
+                          {waitingCopyOptimizedPrompt ? (
                             <Check className="h-full w-full" />
                           ) : (
                             <Copy className="h-full w-full" />
