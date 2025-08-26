@@ -66,6 +66,13 @@
 
     项目将在 `http://localhost:3000` 启动。在浏览器中打开此地址即可开始使用。
 
+### 环境变量
+
+您需要将 `env.example` 这个文件名修改 `.env`，才可以在项目中使用环境变量。
+
+- `BASE_URL`: 选填，网站网址，用于生成网站的 openGraph。
+- `POLLINATIONS_AI_API_KEY`: 选填，[pollinations.ai](https://pollinations.ai/) 提供了不少免费的模型，但部分模型需要您通过[注册一个免费账号](https://auth.pollinations.ai/)获取 key 之后才可以使用。
+
 ## 💡 使用方法
 
 打开应用程序后，您将看到一个直观的界面，可以选择以下两种主要方式来生成和优化提示词：
@@ -123,7 +130,7 @@ Cloudflare Workers 提供了一个简单免费的方式来托管您的应用程�
 4.  **选择您的 Git 仓库**：选择您的 "Midjourney Prompt Generator" 仓库。
 5.  **配置您的项目**：
     - 提供一个项目名称。
-      - **Deploy command (部署命令)**: 将部署命令修改为 `npm run deploy`。
+      - **Deploy command (部署命令)**: 将部署命令修改为 `pnpm run deploy`。
       - **环境变量**: 如果您的应用需要，可以在 Cloudflare Workers 项目设置中添加环境变量。
 6.  **部署**：点击 "Create and Deploy" (创建并部署) 按钮。Cloudflare Workers 将安装依赖、构建项目并将其部署到全球网络。
 7.  **访问应用**：部署完成后，Cloudflare 会提供一个子域名。您也可以在项目设置中配置自定义域名。

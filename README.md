@@ -66,6 +66,13 @@ Before you begin, ensure you have the following software installed in your devel
 
     The project will start at `http://localhost:3000`. Open this address in your browser to begin using the application.
 
+### Environment Variables
+
+You need to change the file name from `env.example` to `.env` to use environment variables in your project.
+
+- `BASE_URL`: Optional. This is the website URL used to generate the OpenGraph for the website.
+- `POLLINATIONS_AI_API_KEY`: Optional. [pollinations.ai](https://pollinations.ai/) provides many free models, but some models require you to obtain a key by [registering a free account](https://auth.pollinations.ai/) before you can use them.
+
 ## 💡 How to Use
 
 Upon opening the application, you will find an intuitive interface offering two main methods for generating and optimizing prompts:
@@ -124,7 +131,7 @@ Cloudflare Workers offers a simple and free way to host your application with gl
 5.  **Configure your project**:
     - Provide a project name.
     - Cloudflare Pages will usually auto-detect Next.js projects and pre-fill build settings. Ensure the following settings are correct:
-      - **Deploy command**: Change the deployment command to `npm run deploy`。
+      - **Deploy command**: Change the deployment command to `pnpm run deploy`。
       - **Environment variables**: If your application needs them, you can add environment variables in the Cloudflare Workers project settings.
 6.  **Deploy**: Click the "Save and Deploy" button. Cloudflare Workers will install dependencies, build your project, and deploy it to their global network.
 7.  **Access your application**: After deployment, Cloudflare will provision a subdomain. You can also configure a custom domain in your project settings.

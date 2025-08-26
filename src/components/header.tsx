@@ -1,4 +1,7 @@
 import { memo } from "react";
+import { Github } from "lucide-react";
+import { useTranslations } from "next-intl";
+import { Button } from "@/components/ui/button";
 import LocaleSwitcher from "@/components/locale-switcher";
 import { cn } from "@/utils/style";
 
@@ -8,6 +11,8 @@ type Props = {
 };
 
 function Header({ className, showBg }: Props) {
+  const t = useTranslations();
+
   return (
     <div
       className={cn(
@@ -20,7 +25,20 @@ function Header({ className, showBg }: Props) {
       ) : null}
       <div className="max-w-screen-xl flex justify-between mx-auto">
         <div></div>
-        <div>
+        <div className="flex items-center">
+          <Button
+            className="h-8 w-8"
+            title={t("Prompt.openSource")}
+            variant="ghost"
+            size="icon"
+          >
+            <a
+              href="https://github.com/Amery2010/midjourney-prompt-generator"
+              target="_blank"
+            >
+              <Github className="h-5 w-5" />
+            </a>
+          </Button>
           <LocaleSwitcher />
         </div>
       </div>
