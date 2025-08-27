@@ -97,7 +97,7 @@ Upon opening the application, you will find an intuitive interface offering two 
 
 ## Deployment
 
-You can choose to deploy this project to platforms like Vercel or Cloudflare Pages.
+You can choose to deploy this project to platforms like Vercel or Cloudflare Workders.
 
 ### 🚀 Deploy to Vercel
 
@@ -135,6 +135,40 @@ Cloudflare Workers offers a simple and free way to host your application with gl
       - **Environment variables**: If your application needs them, you can add environment variables in the Cloudflare Workers project settings.
 6.  **Deploy**: Click the "Save and Deploy" button. Cloudflare Workers will install dependencies, build your project, and deploy it to their global network.
 7.  **Access your application**: After deployment, Cloudflare will provision a subdomain. You can also configure a custom domain in your project settings.
+
+### 🚢 Deploy using Docker
+
+> The Docker version needs to be 20 or above, otherwise it will prompt that the image cannot be found.
+
+```bash
+docker pull ghcr.io/Amery2010/midjourney-prompt-generator:latest
+docker run -d --name midjourney-prompt-generator:latest -p 8721:3000 ghcr.io/Amery2010/midjourney-prompt-generator:latest
+```
+
+You can also specify additional environment variables:
+
+```bash
+docker run -d --name midjourney-prompt-generator \
+  -p 8721:3000 \
+  -e BASE_URL=your-website-url \
+  -e POLLINATIONS_AI_API_KEY=pollinations-auth-key \
+  ghcr.io/Amery2010/midjourney-prompt-generator:latest
+```
+
+or build your own docker image:
+
+```bash
+docker build -t midjourney-prompt-generator .
+docker run -d --name midjourney-prompt-generator -p midjourney-prompt-generator:latest
+```
+
+If you need to specify other environment variables, please add `-e key=value` to the above command to specify it.
+
+Deploy using `docker-compose.yml`:
+
+```bash
+docker compose -f docker-compose.yml build
+```
 
 ## 🤝 Contributing
 

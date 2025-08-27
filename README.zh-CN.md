@@ -97,7 +97,7 @@
 
 ## 部署
 
-您可以选择将此项目部署到 Vercel 或 Cloudflare Pages 等平台。
+您可以选择将此项目部署到 Vercel 或 Cloudflare Workders 等平台。
 
 ### 🚀 部署到 Vercel
 
@@ -134,6 +134,40 @@ Cloudflare Workers 提供了一个简单免费的方式来托管您的应用程�
       - **环境变量**: 如果您的应用需要，可以在 Cloudflare Workers 项目设置中添加环境变量。
 6.  **部署**：点击 "Create and Deploy" (创建并部署) 按钮。Cloudflare Workers 将安装依赖、构建项目并将其部署到全球网络。
 7.  **访问应用**：部署完成后，Cloudflare 会提供一个子域名。您也可以在项目设置中配置自定义域名。
+
+### 🚢 使用 Docker 部署
+
+> Docker 版本需为 20 或更高版本，否则会提示找不到镜像。
+
+```bash
+docker pull ghcr.io/Amery2010/midjourney-prompt-generator:latest
+docker run -d --name midjourney-prompt-generator:latest -p 8721:3000 ghcr.io/Amery2010/midjourney-prompt-generator:latest
+```
+
+您还可以指定其他环境变量：
+
+```bash
+docker run -d --name midjourney-prompt-generator \
+  -p 8721:3000 \
+  -e BASE_URL=您的网站网址 \
+  -e POLLINATIONS_AI_API_KEY=pollinations-auth-key \
+  ghcr.io/Amery2010/midjourney-prompt-generator:latest
+```
+
+或者构建您自己的 docker 镜像：
+
+```bash
+docker build -t midjourney-prompt-generator .
+docker run -d --name midjourney-prompt-generator -p midjourney-prompt-generator:latest
+```
+
+如果您需要指定其他环境变量，请在以上命令中添加 `-e key=value` 进行指定。
+
+使用 `docker-compose.yml` 部署：
+
+```bash
+docker compose -f docker-compose.yml build
+```
 
 ## 🤝 贡献
 

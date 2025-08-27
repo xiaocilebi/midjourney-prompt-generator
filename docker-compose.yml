@@ -1,0 +1,12 @@
+version: "3.9"
+services:
+  deep-research:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: midjourney-prompt-generator
+    container_name: midjourney-prompt-generator
+    env_file:
+      - .env
+    ports:
+      - "8721:3000"
