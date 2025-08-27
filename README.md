@@ -142,7 +142,7 @@ Cloudflare Workers offers a simple and free way to host your application with gl
 
 ```bash
 docker pull ghcr.io/amery2010/midjourney-prompt-generator:latest
-docker run -d --name midjourney-prompt-generator:latest -p 8721:3000 ghcr.io/amery2010/midjourney-prompt-generator:latest
+docker run -d --name midjourney-prompt-generator -p 8721:3000 ghcr.io/amery2010/midjourney-prompt-generator:latest
 ```
 
 You can also specify additional environment variables:
