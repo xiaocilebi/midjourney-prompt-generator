@@ -29,6 +29,7 @@ FROM base AS runner
 WORKDIR /app
 
 ENV NODE_ENV=production
+ENV BUILD_MODE=standalone
 
 # Automatically leverage output traces to reduce image size
 # https://nextjs.org/docs/advanced-features/output-file-tracing
