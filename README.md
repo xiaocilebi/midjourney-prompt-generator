@@ -141,8 +141,8 @@ Cloudflare Workers offers a simple and free way to host your application with gl
 > The Docker version needs to be 20 or above, otherwise it will prompt that the image cannot be found.
 
 ```bash
-docker pull ghcr.io/Amery2010/midjourney-prompt-generator:latest
-docker run -d --name midjourney-prompt-generator:latest -p 8721:3000 ghcr.io/Amery2010/midjourney-prompt-generator:latest
+docker pull ghcr.io/amery2010/midjourney-prompt-generator:latest
+docker run -d --name midjourney-prompt-generator:latest -p 8721:3000 ghcr.io/amery2010/midjourney-prompt-generator:latest
 ```
 
 You can also specify additional environment variables:
@@ -152,7 +152,7 @@ docker run -d --name midjourney-prompt-generator \
   -p 8721:3000 \
   -e BASE_URL=your-website-url \
   -e POLLINATIONS_AI_API_KEY=pollinations-auth-key \
-  ghcr.io/Amery2010/midjourney-prompt-generator:latest
+  ghcr.io/amery2010/midjourney-prompt-generator:latest
 ```
 
 or build your own docker image:
